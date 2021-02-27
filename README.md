@@ -3,3 +3,7 @@
 LPT vgm player YM2608
 
 g++ vgm_p.c -o vgm_p
+
+
+base scheme - neogeo
+additional RAM scheme - this guy https://asmpwx.at.webry.info/201801/article_1.html
