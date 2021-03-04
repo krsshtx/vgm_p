@@ -198,7 +198,11 @@ size = ftell (file);
 
     readBuffer16();
      break;
+    case 0x66:
+    PCtype = 88;
+    printf("\nPC-8801.\n");
     
+     break;
   }   
 
 }
