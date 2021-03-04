@@ -18,6 +18,11 @@ struct VGMHeader
     u_int32_t vgmDataOffset;
     u_int32_t segaPCMClock;
     u_int32_t spcmInterface;
+    u_int32_t RF5C68Clock;
+    u_int32_t ym2203Clock;
+    u_int32_t ym2608Clock;
+    u_int32_t ym2610Clock;
+    
     void Reset()
     {
         indent = 0;

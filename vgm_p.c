@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <cstring>
 #include <cstdlib>
 #include "vgm_p.h"
 #include <time.h>
@@ -57,6 +58,8 @@ unsigned char segarambyte;
 unsigned char segaramin[262144];
 unsigned char DATAtype;
 
+unsigned int PCtype;
+
 u_int32_t RAMwrite;
     
 u_int32_t startaddrh, startaddrl, stopaddrh, stopaddrl;
@@ -67,7 +70,10 @@ u_int32_t a_delay, d_delay  = 0;
      
 static VGMHeader header;
 
-unsigned char segabyte,dac_byte; 
+unsigned char segabyte; 
+signed char dac_byte;
+
+u_int32_t checkpos = 0 ;
 
 void slx(int delay){
     
@@ -124,14 +130,14 @@ u_int32_t readBuffer32()
 
 void ym2612_Reset(void)
 {
-    outb(0x1, LPT_PORT+2); //0000 0000
-       slx(3000);
+  //  outb(0x1, LPT_PORT+2); //0000 0000
+  //     slx(5000);
     outb(0x0, LPT_PORT+2); //0000 0001
-       slx(3000);
+       slx(5000);
     outb(0x1, LPT_PORT+2); //0000 0000
-       slx(3000);
-    outb(0x1, LPT_PORT+2); //0000 0001
-       slx(3000);
+       slx(5000);
+    outb(0x0, LPT_PORT+2); //0000 0001
+       slx(5000);
 //    outb(0x4, LPT_PORT+2); //0000 0100
   //     slx(3000);
  //   outb(0x5, LPT_PORT+2); //0000 0001
@@ -142,7 +148,65 @@ void ym2612_Reset(void)
  //      slx(3000);
 }
 
+unsigned char checkPCtype()
+{
+    
+u_int8_t cmda, cmdd;
 
+u_int32_t size, bls;
+u_int8_t cmd;
+
+size = ftell (file);
+
+ while (PCtype  == 0) {
+    
+    cmd = readBuffer();
+ switch(cmd)
+  {
+    case 0x56:
+        readBuffer16();
+        break;
+    case 0x57:
+        cmda = readBuffer();
+        cmdd = readBuffer();
+        if (cmda == 0x01) {
+
+            if (cmdd == 0xC2 ) {
+                PCtype = 98;
+                printf("\nPC-9801.\n");
+               
+            }
+            if (cmdd == 0xC0 ) {
+                PCtype = 88;
+                printf("\nPC-8801.\n");
+                
+            }
+          //  sleep(10);
+        }
+         break;
+    case 0x67:
+        readBuffer();
+        readBuffer();
+        bls = readBuffer32() ;
+
+        fseek ( file , bls  , SEEK_CUR );
+        //sleep(1);
+        break;
+        
+        
+    case 0x61:
+
+    readBuffer16();
+     break;
+    
+  }   
+
+}
+ fseek ( file , size  , SEEK_SET );
+// sleep(10);
+ return PCtype;
+ 
+}
 
 
 void ym2612_Send(unsigned char addr, unsigned char data, bool setA1) //0x52 = A1 LOW, 0x53 = A1 HIGH
@@ -234,15 +298,29 @@ int ym_ram_write(void)
     u_int8_t datal;
     u_int8_t offset;
     
-    offset = 5;
+    offset = 2;
     
 printf("\nRAM write.\n");
     
  ym2612_Send(0x10, 0x13, 1);
  ym2612_Send(0x10, 0x80, 1);
  ym2612_Send(0x0, 0x60, 1);
- ym2612_Send(0x1, 0x02, 1);
  
+ if (PCtype == 98 ){
+     
+    ym2612_Send(0x1, 0x02, 1);
+    
+    offset = 5;
+    
+    }
+ if (PCtype == 88 ){
+     
+    ym2612_Send(0x1, 0x00, 1);
+    
+    offset = 2;
+    
+    }
+     
  // bits >> 2 (PC-8801)
  // bytes >> 5 (PC-9801)
  //
@@ -334,30 +412,38 @@ int ym_dac_write(void){
     
     printf("ym dac write\n");
     
-    ym2612_Send(0x10, 0x17, 1);
+    ym2612_Send(0x10, 0x1B, 1);
     ym2612_Send(0x10, 0x80, 1);
-    ym2612_Send(0x0, 0x80, 1);
-    ym2612_Send(0x1, 0xC0, 1);
+    //ym2612_Send(0x0, 0x80, 1);
+    //ym2612_Send(0x1, 0xC0, 1);
     
-    ym2612_Send(0x06, 0xF4, 1);
-    ym2612_Send(0x07, 0x01, 1);
+    //ym2612_Send(0x06, 0xF4, 1); //8000Hz
+    //ym2612_Send(0x07, 0x01, 1);
     
-    ym2612_Send(0x09, 0xE7, 1);
-    ym2612_Send(0x0A, 0x24, 1);
- 
-    ym2612_Send(0x0B, 0xA0, 1);
+    //ym2612_Send(0x06, 0xB5, 1); //22050Hz
+    //ym2612_Send(0x07, 0x00, 1);
+    
+    ym2612_Send(0x06, 0x5B, 1); //44100Hz
+    ym2612_Send(0x07, 0x00, 1);
+
+    
+    //ym2612_Send(0x09, 0xB5, 1);
+    //ym2612_Send(0x0A, 0x65, 1);
+    ym2612_Send(0x1, 0xCC, 1);
+    //ym2612_Send(0x0B, 0xA0, 1);
  
 
     for (int l=0;l<3340578;l++) {
      
-    fread(&dac_byte, sizeof(unsigned char), 1, dac_file); 
+    fread(&dac_byte, sizeof(signed char), 1, dac_file); 
     
     // printf("%lu\n",dac_byte);
        
-    ym2612_Send(0x08, dac_byte, 1);
-    ym2612_Send(0x10, 0x1b, 1);
-    slx(35000);
+    ym2612_Send(0x0E, dac_byte, 1);
+    ym2612_Send(0x10, 0x80, 1);
+    slx(80000);
     // ym2612_Send(0x10, 0x13, 1,0,0);
+    
     }
     ym2612_Send(0x0, 0x0, 1);
     ym2612_Send(0x10, 0x80, 1);
@@ -383,7 +469,7 @@ u_int16_t parseVGM()
     
   u_int8_t cmd = readBuffer();
   
-  //  printf("%d",cmd);printf("<cmd ");
+    //printf("%d\n",cmd);printf("<cmd ");
         switch(cmd)
   {
       
@@ -681,7 +767,20 @@ u_int16_t parseVGM()
       
       pcmBufferPosition++;
       //printf("r");
-      ym2612_Send(addr, data, 0);
+      //ym2612_Send(addr, data, 0);
+      
+      unsigned char x = data;
+      signed char y = 0;
+
+      //memcpy(&y, &x, sizeof(signed char));
+      
+
+    //ym2612_Send(0x06, 0xF4, 1); //8000Hz
+    //ym2612_Send(0x07, 0x01, 1);
+    //ym2612_Send(0x1, 0xCC, 1);
+    //ym2612_Send(0x0E, y, 1);
+    //ym2612_Send(0x10, 0x80, 1);
+    //slx(80000);
       
       return (int)wait;
      
@@ -728,6 +827,23 @@ u_int16_t parseVGM()
     //  pcmBufferPosition = cmdPos;
    
     DATAtype=readBuffer(); 
+    
+    if (DATAtype == 0x00) {
+     
+            pcmBufferPosition = 0;
+            PCMSize = readBuffer32() ;
+      
+            if(PCMSize > MAX_PCM_BUFFER_SIZE)
+            {
+                printf("PCM Size too big!\n");
+            }
+       
+            for (u_int32_t i = 0; i < PCMSize; i++)
+                {
+                    segaram[i]=readBuffer();
+                    fwrite(&segaram[i], sizeof(unsigned char), 1, file3);
+                }
+    }
         
     if ((DATAtype == 0x81) || (DATAtype == 0x82)) {
                 
@@ -789,22 +905,7 @@ u_int16_t parseVGM()
         fseek ( file , RAMwrite , SEEK_CUR );
     }
      
-    if (DATAtype == 0x00) {
-     
-            pcmBufferPosition = 0;
-            PCMSize = readBuffer32() ;
-      
-            if(PCMSize > MAX_PCM_BUFFER_SIZE)
-            {
-                printf("PCM Size too big!\n");
-            }
-       
-            for (u_int32_t i = 0; i < PCMSize; i++)
-                {
-                    segaram[i]=readBuffer();
-                    fwrite(&segaram[i], sizeof(unsigned char), 1, file3);
-                }
-    }
+
       
     if (DATAtype == 0x91) {
           
@@ -920,7 +1021,7 @@ int main (int argc, char *argv[])
         exit (1);
     }
 
-        
+
     struct timespec start;
     struct timespec end;
    
@@ -934,6 +1035,7 @@ int main (int argc, char *argv[])
 
     //  dac_file = fopen("segaram_l.bin", "rb");
     //  dac_file = fopen("encode.raw", "rb");
+      dac_file = fopen("mars44.raw", "rb");
     
     if(file < 0) {
        printf ("File not found \r");
@@ -963,10 +1065,14 @@ int main (int argc, char *argv[])
     header.vgmDataOffset = readBuffer32(); //VGM data Offset
     header.segaPCMClock = readBuffer32(); //Sega PCM Clock
     header.spcmInterface = readBuffer32(); //SPCM Interface
+    header.RF5C68Clock = readBuffer32(); //RF5C68 clock 
+    header.ym2203Clock  = readBuffer32(); //YM2202 clock 
+    header.ym2608Clock = readBuffer32(); //YM2608 clock 
+    header.ym2610Clock = readBuffer32(); //YM2610 clock 
 
    
     //Jump to VGM data start and compute loop location
-    if(header.vgmDataOffset == 0x0C){
+    if(header.vgmDataOffset == 0x00){
         header.vgmDataOffset = 0x40;
         printf("%lu",header.vgmDataOffset);printf(" vgmDataOffset \n");}
     else
@@ -977,7 +1083,7 @@ int main (int argc, char *argv[])
   
     if(header.vgmDataOffset != 0x40)
         {
-        for(u_int32_t i = 0x40; i<header.vgmDataOffset; i++)
+        for(u_int32_t i = 0x50; i<header.vgmDataOffset; i++)
         readBuffer();
         }
     if(header.loopOffset == 0x00)
@@ -992,6 +1098,10 @@ int main (int argc, char *argv[])
         }
         
         //   printf ("clock \r",header.ym2612Clock);
+    
+    if (header.ym2608Clock > 0) {
+        checkPCtype();
+    }
     
     remove("segafm.bin");
  
@@ -1011,7 +1121,7 @@ int main (int argc, char *argv[])
 
     ym2612_Reset();
       
-   //   ym_dac_write();
+    //  ym_dac_write();
    //   ym_zero();
       
   
