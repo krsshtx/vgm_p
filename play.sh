@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# params: file type (98,88)
+# param: dir with uncompressed vgms
 
 IFS=$'\n' 
 
