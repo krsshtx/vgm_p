@@ -71,7 +71,6 @@ u_int32_t a_delay, d_delay  = 0;
 static VGMHeader header;
 
 unsigned char segabyte; 
-signed char dac_byte;
 
 u_int32_t checkpos = 0 ;
 
@@ -130,22 +129,13 @@ u_int32_t readBuffer32()
 
 void ym2612_Reset(void)
 {
-  //  outb(0x1, LPT_PORT+2); //0000 0000
-  //     slx(5000);
-    outb(0x0, LPT_PORT+2); //0000 0001
-       slx(5000);
-    outb(0x1, LPT_PORT+2); //0000 0000
-       slx(5000);
-    outb(0x0, LPT_PORT+2); //0000 0001
-       slx(5000);
-//    outb(0x4, LPT_PORT+2); //0000 0100
-  //     slx(3000);
- //   outb(0x5, LPT_PORT+2); //0000 0001
-  //     slx(3000);
- //   outb(0x0, LPT_PORT+2); //0000 0000
-//       slx(3000);
-//    outb(0x5, LPT_PORT+2); //0000 0001
- //      slx(3000);
+    outb(0x0, LPT_PORT+2); //0000 0000
+
+    outb(0x1, LPT_PORT+2); //0000 0001
+
+    outb(0x0, LPT_PORT+2); //0000 0000
+
+    usleep(1000);
 }
 
 unsigned char checkPCtype()
@@ -217,72 +207,43 @@ void ym2612_Send(unsigned char addr, unsigned char data, bool setA1) //0x52 = A1
 {
     // 1000000000/8000000 = 125
     
-    a_delay = 5;
-    d_delay = 5; //SSG, ADPCM wait cycle  = 0
+    a_delay = 0;
+    d_delay = 0; //SSG, ADPCM wait cycle  = 0
         
-    if ((addr > 0x21 ) && (addr < 0xB6))   { //FM wait cycle > 17
+    if ((addr > 0x20 ) && (addr < 0xB7))   { //FM wait cycle > 17
     //ad_delay =  2125;    }
     a_delay =  2200;    }
          
     if (setA1 == 0 ) {
          
-        if ((addr > 0x10 ) && (addr < 0x1D)) {
-                //ad_delay =  2125;    }
-                a_delay =  2200;    
+        if ((addr > 0x09 ) && (addr < 0x1E)) { //rythm
+                a_delay =  2125;    
+                //a_delay =  2200;    
         }
     }
          
-    if ((addr > 0x21 ) && (addr < 0x9E))   {
-    d_delay =  10375;    }
+    if ((addr > 0x20 ) && (addr < 0x9F))   {
+    d_delay =  10375;    } //83*125
          
-    if ((addr > 0xA0 ) && (addr < 0xB6))   {
-    d_delay =  5875;    }
+    if ((addr > 0x9F ) && (addr < 0xB7))   {
+    d_delay =  5875;    } //47*125
         
          if (setA1 == 0 ) {
              
-            if (addr == 0x10 ) {
-            //d_delay =  72000;    }
-            d_delay =  75000;    }
+            if (addr == 0x10 ) { //rythm 576
+            d_delay =  72000;    }
+            //d_delay =  75000;    }
                 
-            if ((addr > 0x11 ) && (addr < 0x1D))   {
+            if ((addr > 0x10 ) && (addr < 0x1E))   { //rythm 83
             d_delay =  10375;    }
+            //d_delay =  11250;    }
          }
     
     
   switch(setA1)
   {
-    case 0:
-    //outb(0x0, LPT_PORT+2); //0000 0000 
-    outb(0x9, LPT_PORT+2); //0000 1001
-    outb(addr,LPT_PORT);
-    outb(0xB, LPT_PORT+2); //0000 1011 
-     slx(a_delay);
-    outb(0x9, LPT_PORT+2); //0000 1001 
-    outb(0x1, LPT_PORT+2); //0000 0001 
-    outb(data,LPT_PORT);
-    outb(0x3, LPT_PORT+2); //0000 0011 
-     slx(d_delay);
-    outb(0x1, LPT_PORT+2); //0000 0001 
-
-    break;
-    case 1:
-        
-    outb(0xD, LPT_PORT+2); //0000 1101 
-    outb(addr,LPT_PORT);
-    outb(0xF, LPT_PORT+2); //0000 1111
-     slx(a_delay);
-    outb(0xD, LPT_PORT+2); //0000 1101 
-    outb(0x5, LPT_PORT+2); //0000 0101 
-    outb(data,LPT_PORT);
-    outb(0x7, LPT_PORT+2); //0000 0111 
-     slx(d_delay);
-    outb(0x5, LPT_PORT+2); //0000 0101 
-
-   
-    break;
-    }
-    
-    
+      
+          
 //0 unused 
 //0 unused 
 //0 bidi off 
@@ -293,6 +254,45 @@ void ym2612_Send(unsigned char addr, unsigned char data, bool setA1) //0x52 = A1
 //x strobe 1 - reset - hw inverted
 
     
+      
+      
+    case 0:
+    //outb(0x0, LPT_PORT+2); //0000 0000 
+    outb(0x9, LPT_PORT+2); //0000 1001
+    outb(addr,LPT_PORT);
+    outb(0xB, LPT_PORT+2); //0000 1011 
+     slx(100);
+    outb(0x9, LPT_PORT+2); //0000 1001 
+     slx(a_delay);
+    outb(0x1, LPT_PORT+2); //0000 0001 
+   
+    outb(data,LPT_PORT);
+    outb(0x3, LPT_PORT+2); //0000 0011 
+     slx(100);
+    outb(0x1, LPT_PORT+2); //0000 0001 
+    slx(d_delay);
+
+    break;
+    case 1:
+        
+    outb(0xD, LPT_PORT+2); //0000 1101 
+    outb(addr,LPT_PORT);
+    outb(0xF, LPT_PORT+2); //0000 1111
+    slx(100);
+    outb(0xD, LPT_PORT+2); //0000 1101 
+    slx(a_delay);
+    outb(0x5, LPT_PORT+2); //0000 0101 
+    outb(data,LPT_PORT);
+    outb(0x7, LPT_PORT+2); //0000 0111 
+    slx(100);
+    outb(0x5, LPT_PORT+2); //0000 0101 
+     slx(d_delay);
+
+   
+    break;
+    }
+    
+
 }
 
 
@@ -409,52 +409,6 @@ int ym_zero(void)
     return 0;
 }
 
-
-int ym_dac_write(void){
-    
-    int dts=0;
-    
-    printf("ym dac write\n");
-    
-    ym2612_Send(0x10, 0x1B, 1);
-    ym2612_Send(0x10, 0x80, 1);
-    //ym2612_Send(0x0, 0x80, 1);
-    //ym2612_Send(0x1, 0xC0, 1);
-    
-    //ym2612_Send(0x06, 0xF4, 1); //8000Hz
-    //ym2612_Send(0x07, 0x01, 1);
-    
-    //ym2612_Send(0x06, 0xB5, 1); //22050Hz
-    //ym2612_Send(0x07, 0x00, 1);
-    
-    ym2612_Send(0x06, 0x5B, 1); //44100Hz
-    ym2612_Send(0x07, 0x00, 1);
-
-    
-    //ym2612_Send(0x09, 0xB5, 1);
-    //ym2612_Send(0x0A, 0x65, 1);
-    ym2612_Send(0x1, 0xCC, 1);
-    //ym2612_Send(0x0B, 0xA0, 1);
- 
-
-    for (int l=0;l<3340578;l++) {
-     
-    fread(&dac_byte, sizeof(signed char), 1, dac_file); 
-    
-    // printf("%lu\n",dac_byte);
-       
-    ym2612_Send(0x0E, dac_byte, 1);
-    ym2612_Send(0x10, 0x80, 1);
-    slx(80000);
-    // ym2612_Send(0x10, 0x13, 1,0,0);
-    
-    }
-    ym2612_Send(0x0, 0x0, 1);
-    ym2612_Send(0x10, 0x80, 1);
-
-    return 0;
-        
-}
 
 
 char ym0=0x52;
@@ -773,6 +727,8 @@ u_int16_t parseVGM()
       //printf("r");
       //ym2612_Send(addr, data, 0);
       
+     // ym_dac_write_b(data);
+      
       unsigned char x = data;
       signed char y = 0;
 
@@ -1029,17 +985,13 @@ int main (int argc, char *argv[])
     struct timespec start;
     struct timespec end;
    
-
     unsigned int  twait;
 
     bool parse = false;
 
-    //file = fopen("chase.vgm", "rb");
     file = fopen(argv[1], "rb");
 
-    //  dac_file = fopen("segaram_l.bin", "rb");
-    //  dac_file = fopen("encode.raw", "rb");
-      dac_file = fopen("mars44.raw", "rb");
+
     
     if(file < 0) {
        printf ("File not found \r");
@@ -1069,10 +1021,6 @@ int main (int argc, char *argv[])
     header.vgmDataOffset = readBuffer32(); //VGM data Offset
     header.segaPCMClock = readBuffer32(); //Sega PCM Clock
     header.spcmInterface = readBuffer32(); //SPCM Interface
-    header.RF5C68Clock = readBuffer32(); //RF5C68 clock 
-    header.ym2203Clock  = readBuffer32(); //YM2202 clock 
-    header.ym2608Clock = readBuffer32(); //YM2608 clock 
-    header.ym2610Clock = readBuffer32(); //YM2610 clock 
 
    
     //Jump to VGM data start and compute loop location
@@ -1083,10 +1031,18 @@ int main (int argc, char *argv[])
     {
         header.vgmDataOffset += 0x34;
         printf("%lu",header.vgmDataOffset);printf(" vgmDataOffset \n");
+        
     }
   
     if(header.vgmDataOffset != 0x40)
         {
+            
+        header.RF5C68Clock = readBuffer32(); //RF5C68 clock 
+        header.ym2203Clock  = readBuffer32(); //YM2202 clock 
+        header.ym2608Clock = readBuffer32(); //YM2608 clock 
+        header.ym2610Clock = readBuffer32(); //YM2610 clock 
+
+            
         for(u_int32_t i = 0x50; i<header.vgmDataOffset; i++)
         readBuffer();
         }
@@ -1124,8 +1080,8 @@ int main (int argc, char *argv[])
   
 
     ym2612_Reset();
-      
-    //  ym_dac_write();
+    
+     
    //   ym_zero();
       
   
@@ -1144,7 +1100,7 @@ int main (int argc, char *argv[])
    
         }   
    
-    usleep(1000);
+    usleep(2000);
     ym2612_Reset();
            
     fclose(file);
